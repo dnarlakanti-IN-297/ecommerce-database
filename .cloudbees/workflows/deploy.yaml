@@ -48,42 +48,38 @@ jobs:
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
 
-      - name: Determine namespace
+      - name: Create namespace if not exists
         uses: docker://alpine:latest
         shell: sh
         run: |
+          apk add --no-cache curl
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl && mv kubectl /usr/local/bin/
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+
           case "$ENVIRONMENT" in
-            dev)
-              NAMESPACE="ecommerce-dev"
-              ;;
-            staging)
-              NAMESPACE="ecommerce-staging"
-              ;;
-            prod)
-              NAMESPACE="ecommerce-prod"
-              ;;
-            *)
-              echo "❌ Unknown environment: $ENVIRONMENT"
-              exit 1
-              ;;
+            dev) NAMESPACE="ecommerce-dev" ;;
+            staging) NAMESPACE="ecommerce-staging" ;;
+            prod) NAMESPACE="ecommerce-prod" ;;
+            *) echo "❌ Unknown environment: $ENVIRONMENT"; exit 1 ;;
           esac
 
-          echo "NAMESPACE=$NAMESPACE" >> $CLOUDBEES_OUTPUTS/namespace
           echo "✅ Deploying database to namespace: $NAMESPACE"
-
-      - name: Create namespace if not exists
-        uses: docker://google/cloud-sdk:alpine
-        shell: sh
-        run: |
-          NAMESPACE=$(cat $CLOUDBEES_OUTPUTS/namespace)
           kubectl get namespace $NAMESPACE || kubectl create namespace $NAMESPACE
           echo "✅ Namespace $NAMESPACE ready"
+        env:
+          KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
 
       - name: Deploy database with Helm
         uses: docker://alpine/helm:latest
         shell: sh
         run: |
-          NAMESPACE=$(cat $CLOUDBEES_OUTPUTS/namespace)
+          case "$ENVIRONMENT" in
+            dev) NAMESPACE="ecommerce-dev" ;;
+            staging) NAMESPACE="ecommerce-staging" ;;
+            prod) NAMESPACE="ecommerce-prod" ;;
+          esac
 
           echo "🚀 Deploying database (PostgreSQL)"
           echo "📍 Environment: $ENVIRONMENT"
@@ -109,10 +105,20 @@ jobs:
           echo "✅ Database deployment successful!"
 
       - name: Verify database deployment
-        uses: docker://google/cloud-sdk:alpine
+        uses: docker://alpine:latest
         shell: sh
         run: |
-          NAMESPACE=$(cat $CLOUDBEES_OUTPUTS/namespace)
+          apk add --no-cache curl
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl && mv kubectl /usr/local/bin/
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+
+          case "$ENVIRONMENT" in
+            dev) NAMESPACE="ecommerce-dev" ;;
+            staging) NAMESPACE="ecommerce-staging" ;;
+            prod) NAMESPACE="ecommerce-prod" ;;
+          esac
 
           echo "📊 Checking database pods..."
           kubectl get pods -n $NAMESPACE -l app=ecommerce-postgres
@@ -125,12 +131,24 @@ jobs:
             --timeout=600s
 
           echo "✅ Database is running!"
+        env:
+          KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
 
       - name: Run database migrations
-        uses: docker://google/cloud-sdk:alpine
+        uses: docker://alpine:latest
         shell: sh
         run: |
-          NAMESPACE=$(cat $CLOUDBEES_OUTPUTS/namespace)
+          apk add --no-cache curl
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl && mv kubectl /usr/local/bin/
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+
+          case "$ENVIRONMENT" in
+            dev) NAMESPACE="ecommerce-dev" ;;
+            staging) NAMESPACE="ecommerce-staging" ;;
+            prod) NAMESPACE="ecommerce-prod" ;;
+          esac
 
           echo "🔄 Running database migrations for version: $SCHEMA_VERSION"
 
@@ -143,12 +161,18 @@ jobs:
           kubectl exec -n $NAMESPACE $DB_POD -- psql -U ecommerce -d ecommerce -c "SELECT version();" || echo "Database connection test skipped"
 
           echo "✅ Database migrations complete!"
+        env:
+          KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
 
       - name: Output database connection info
         uses: docker://alpine:latest
         shell: sh
         run: |
-          NAMESPACE=$(cat $CLOUDBEES_OUTPUTS/namespace)
+          case "$ENVIRONMENT" in
+            dev) NAMESPACE="ecommerce-dev" ;;
+            staging) NAMESPACE="ecommerce-staging" ;;
+            prod) NAMESPACE="ecommerce-prod" ;;
+          esac
 
           echo ""
           echo "📋 Database Connection Information:"
