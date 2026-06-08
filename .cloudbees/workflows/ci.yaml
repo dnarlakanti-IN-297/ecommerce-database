@@ -10,17 +10,36 @@ on:
 
 permissions:
   scm-token-own: read
+  id-token: read
 
 jobs:
-  version:
+  build:
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      GIT_COMMIT_SHA: ${{ cloudbees.scm.sha }}
+
     steps:
       - name: Checkout code
         uses: cloudbees-io/checkout@v1
 
-      - name: Generate schema version
+      - name: Configure Docker Hub credentials
+        uses: cloudbees-io/configure-oci-credentials@v1
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Database Schema Version Image
+        uses: cloudbees-io/kaniko@v1
+        with:
+          context: .
+          destination: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-database:${{ cloudbees.scm.sha }},${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-database:latest
+          build-args: SCHEMA_VERSION=${{ cloudbees.scm.sha }}
+
+      - name: Output image tags
         uses: docker://alpine:latest
         shell: sh
         run: |
-          SCHEMA_VERSION="${{ cloudbees.scm.sha }}"
-          echo "✅ Database schema version: $SCHEMA_VERSION"
-          echo "This version will be used for database migrations"
+          echo "✅ Database schema version image built and pushed:"
+          echo "$DOCKERHUB_USERNAME/ecommerce-database:$GIT_COMMIT_SHA"
