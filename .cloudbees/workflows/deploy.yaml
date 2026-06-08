@@ -42,7 +42,7 @@ jobs:
           echo "$KUBECONFIG_CONTENT" > ~/.kube/config
           kubectl cluster-info
         env:
-          KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_CONTENT: ${{ vars.KUBECONFIG }}
 
       - name: Determine namespace
         uses: docker://alpine:latest
