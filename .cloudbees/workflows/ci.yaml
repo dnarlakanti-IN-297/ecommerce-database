@@ -1,0 +1,26 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: Database Schema CI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  scm-token-own: read
+
+jobs:
+  version:
+    steps:
+      - name: Checkout code
+        uses: cloudbees-io/checkout@v1
+
+      - name: Generate schema version
+        uses: docker://alpine:latest
+        shell: sh
+        run: |
+          SCHEMA_VERSION="${{ cloudbees.scm.sha }}"
+          echo "✅ Database schema version: $SCHEMA_VERSION"
+          echo "This version will be used for database migrations"
