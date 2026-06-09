@@ -99,6 +99,7 @@ jobs:
             --set database.enabled=true \
             --set frontend.enabled=false \
             --set backend.enabled=false \
+            --set ingress.enabled=false \
             --wait \
             --timeout 10m
 
