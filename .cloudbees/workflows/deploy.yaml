@@ -121,12 +121,12 @@ jobs:
           esac
 
           echo "📊 Checking database pods..."
-          kubectl get pods -n $NAMESPACE -l app=ecommerce-postgres
+          kubectl get pods -n $NAMESPACE -l tier=database
 
           echo ""
           echo "⏳ Waiting for database to be ready..."
           kubectl wait --for=condition=ready pod \
-            -l app=ecommerce-postgres \
+            -l tier=database \
             -n $NAMESPACE \
             --timeout=600s
 
@@ -153,7 +153,7 @@ jobs:
           echo "🔄 Running database migrations for version: $SCHEMA_VERSION"
 
           # Get database pod name
-          DB_POD=$(kubectl get pod -n $NAMESPACE -l app=ecommerce-postgres -o jsonpath='{.items[0].metadata.name}')
+          DB_POD=$(kubectl get pod -n $NAMESPACE -l tier=database -o jsonpath='{.items[0].metadata.name}')
 
           echo "Database pod: $DB_POD"
 
