@@ -37,9 +37,7 @@ jobs:
           destination: ${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-database:${{ cloudbees.scm.sha }},${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-database:latest
           build-args: SCHEMA_VERSION=${{ cloudbees.scm.sha }}
 
-      - name: Output image tags
-        uses: docker://alpine:latest
-        shell: sh
-        run: |
-          echo "✅ Database schema version image built and pushed:"
-          echo "$DOCKERHUB_USERNAME/ecommerce-database:$GIT_COMMIT_SHA"
+      - name: Publish artifact
+        uses: cloudbees-io/publish-evidence-item@v1
+        with:
+          content: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/ecommerce-database:${{ cloudbees.scm.sha }}
