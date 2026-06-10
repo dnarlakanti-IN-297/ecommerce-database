@@ -107,20 +107,14 @@ jobs:
           echo "📦 Namespace: $NAMESPACE"
           echo "📊 Schema version: $SCHEMA_VERSION"
 
-          # Determine values file based on environment
-          VALUES_FILE="helm/ecommerce/values-${ENVIRONMENT}.yaml"
+          VALUES_FILE="helm/ecommerce-database/values-${ENVIRONMENT}.yaml"
           if [ ! -f "$VALUES_FILE" ]; then
-            VALUES_FILE="helm/ecommerce/values.yaml"
+            VALUES_FILE="helm/ecommerce-database/values.yaml"
           fi
 
-          # Deploy database only (not full app)
-          helm upgrade --install ecommerce-database ./helm/ecommerce \
+          helm upgrade --install ecommerce-database ./helm/ecommerce-database \
             --namespace $NAMESPACE \
             --values $VALUES_FILE \
-            --set database.enabled=true \
-            --set frontend.enabled=false \
-            --set backend.enabled=false \
-            --set ingress.enabled=false \
             --wait \
             --timeout 10m
 
