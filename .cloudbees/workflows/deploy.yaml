@@ -20,7 +20,6 @@ on:
 
 jobs:
   deploy-database:
-    environment: ${{ inputs.environment }}
     env:
       SCHEMA_VERSION: ${{ inputs.artifact-id }}
       ENVIRONMENT: ${{ inputs.environment }}
@@ -47,6 +46,7 @@ jobs:
           kubectl cluster-info
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Create namespace if not exists
         uses: docker://alpine:latest
@@ -70,6 +70,7 @@ jobs:
           echo "✅ Namespace $NAMESPACE ready"
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Cleanup old Helm releases
         uses: docker://alpine/helm:latest
@@ -88,12 +89,11 @@ jobs:
           esac
 
           helm uninstall ecommerce -n $NAMESPACE 2>/dev/null || true
-
-          # Force delete all Helm release secrets for ecommerce-database to clear any stuck state
           kubectl delete secret -n $NAMESPACE -l owner=helm,name=ecommerce-database 2>/dev/null || true
           echo "✅ Cleanup done"
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Deploy database with Helm
         uses: docker://alpine/helm:latest
@@ -118,10 +118,12 @@ jobs:
           helm upgrade --install ecommerce-database ./helm/ecommerce-database \
             --namespace $NAMESPACE \
             --values $VALUES_FILE \
-            --wait \
             --timeout 10m
 
           echo "✅ Database deployment successful!"
+        env:
+          KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Verify database deployment
         uses: docker://alpine:latest
@@ -142,7 +144,6 @@ jobs:
           echo "📊 Checking database pods..."
           kubectl get pods -n $NAMESPACE -l tier=database
 
-          echo ""
           echo "⏳ Waiting for database to be ready..."
           kubectl wait --for=condition=ready pod \
             -l tier=database \
@@ -152,6 +153,7 @@ jobs:
           echo "✅ Database is running!"
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Run database migrations
         uses: docker://alpine:latest
@@ -171,17 +173,15 @@ jobs:
 
           echo "🔄 Running database migrations for version: $SCHEMA_VERSION"
 
-          # Get database pod name
           DB_POD=$(kubectl get pod -n $NAMESPACE -l tier=database -o jsonpath='{.items[0].metadata.name}')
-
           echo "Database pod: $DB_POD"
 
-          # Check if database is accessible
           kubectl exec -n $NAMESPACE $DB_POD -- psql -U ecommerce -d ecommerce -c "SELECT version();" || echo "Database connection test skipped"
 
           echo "✅ Database migrations complete!"
         env:
           KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Output database connection info
         uses: docker://alpine:latest
@@ -193,11 +193,12 @@ jobs:
             prod) NAMESPACE="ecommerce-prod" ;;
           esac
 
-          echo ""
           echo "📋 Database Connection Information:"
           echo "Service: ecommerce-postgres.$NAMESPACE.svc.cluster.local"
           echo "Port: 5432"
           echo "Database: ecommerce"
           echo "Username: ecommerce"
-          echo ""
           echo "✅ Database ready for application connections!"
+        env:
+          KUBECONFIG_BASE64: ${{ inputs.kubeconfig }}
+          ENVIRONMENT: ${{ inputs.environment }}
