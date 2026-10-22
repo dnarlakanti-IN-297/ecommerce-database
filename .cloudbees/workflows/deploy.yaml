@@ -95,6 +95,7 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
 
       - name: Deploy database with Helm
+        kind: deploy
         uses: docker://alpine/helm:latest
         shell: sh
         run: |
